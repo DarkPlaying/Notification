@@ -44,13 +44,16 @@ notificationsRef.on('child_added', (userSnapshot) => {
         // Check if it's too old (older than 5 minutes)
         if (Date.now() - notification.timestamp > 5 * 60 * 1000) return;
 
-        console.log(`New notification for user ${userId}:`, notification.title);
+        console.log(`Processing notification for user ${userId}:`, notification.title);
 
         try {
+            console.log(`Fetching user document for ${userId}...`);
             const userDoc = await firestore.collection('users').doc(userId).get();
+
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 const fcmToken = userData.fcmToken;
+                console.log(`User ${userId} found. Token exists: ${!!fcmToken}`);
 
                 if (fcmToken) {
                     const message = {
@@ -70,18 +73,22 @@ notificationsRef.on('child_added', (userSnapshot) => {
                     };
 
                     try {
-                        await messaging.send(message);
-                        console.log('Successfully sent message:', notifId);
+                        console.log(`Sending FCM message to ${userId}...`);
+                        const response = await messaging.send(message);
+                        console.log('Successfully sent message:', response);
 
                         // Mark as processed
                         await userNotifRef.child(notifId).update({ processed: true });
+                        console.log(`Marked notification ${notifId} as processed.`);
 
                     } catch (error) {
-                        console.log('Error sending message:', error);
+                        console.error('Error sending FCM message:', error);
                     }
                 } else {
                     console.log(`No FCM token for user ${userId}`);
                 }
+            } else {
+                console.log(`User document ${userId} does not exist.`);
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
