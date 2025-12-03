@@ -1,0 +1,16 @@
+{
+    "name": "edu-online-notification-service",
+    "version": "1.0.0",
+    "description": "Background notification worker for Edu Online",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "firebase-admin": "^12.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
