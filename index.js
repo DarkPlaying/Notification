@@ -28,10 +28,17 @@ console.log('Notification Server Started...');
 console.log('Listening for new notifications in Realtime Database...');
 
 const notificationsRef = db.ref('notifications');
+const activeListeners = new Set();
 
 // Listen for new notifications added to any user
 notificationsRef.on('child_added', (userSnapshot) => {
     const userId = userSnapshot.key;
+
+    if (activeListeners.has(userId)) {
+        return; // Already listening for this user
+    }
+    activeListeners.add(userId);
+    console.log(`Attaching listener for user ${userId}`);
 
     const userNotifRef = db.ref(`notifications/${userId}`);
 
