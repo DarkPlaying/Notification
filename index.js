@@ -52,7 +52,7 @@ notificationsRef.on('child_added', (userSnapshot) => {
         // Check if it's too old (older than 5 minutes)
         if (Date.now() - notification.timestamp > 5 * 60 * 1000) return;
 
-        console.log(`Processing notification for user ${userId}:`, notification.title);
+        console.log(`Processing notification for user ${userId}:`, JSON.stringify(notification));
 
         try {
             console.log(`Fetching user document for ${userId}...`);
