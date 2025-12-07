@@ -1,4 +1,3 @@
-
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getDatabase } from 'firebase-admin/database';
@@ -44,7 +43,7 @@ notificationsRef.on('child_added', (userSnapshot) => {
 
     const userNotifRef = db.ref(`notifications/${userId}`);
 
-    userNotifRef.on('child_added', async (snapshot) => {
+    userNotifRef.on('child_added', async(snapshot) => {
         const notification = snapshot.val();
         const notifId = snapshot.key;
 
@@ -109,9 +108,18 @@ notificationsRef.on('child_added', (userSnapshot) => {
 // Create a simple HTTP server
 const port = process.env.PORT || 3000;
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer(async(req, res) => {
     // Enable CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Enable CORS for trusted domains only
+    const allowedOrigins = [
+        'https://educationfyp.vercel.app'
+    ];
+    const origin = req.headers.origin;
+
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -124,7 +132,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/delete-user') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', async () => {
+        req.on('end', async() => {
             try {
                 const { email } = JSON.parse(body);
                 if (!email) throw new Error('Email is required');
