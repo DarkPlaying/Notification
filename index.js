@@ -43,7 +43,7 @@ notificationsRef.on('child_added', (userSnapshot) => {
 
     const userNotifRef = db.ref(`notifications/${userId}`);
 
-    userNotifRef.on('child_added', async(snapshot) => {
+    userNotifRef.on('child_added', async (snapshot) => {
         const notification = snapshot.val();
         const notifId = snapshot.key;
 
@@ -55,49 +55,44 @@ notificationsRef.on('child_added', (userSnapshot) => {
         console.log(`Processing notification for user ${userId}:`, JSON.stringify(notification));
 
         try {
-            console.log(`Fetching user document for ${userId}...`);
-            const userDoc = await firestore.collection('users').doc(userId).get();
+            console.log(`Fetching user token from RTDB for ${userId}...`);
+            // OPTIMIZATION: Read from RTDB instead of Firestore to save costs/reads
+            const userTokenSnap = await db.ref(`users/${userId}/fcmToken`).get();
+            const fcmToken = userTokenSnap.val();
 
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                const fcmToken = userData.fcmToken;
-                console.log(`User ${userId} found. Token exists: ${!!fcmToken}`);
-
-                if (fcmToken) {
-                    const message = {
-                        token: fcmToken,
-                        // notification: { ... }  <-- REMOVED to prevent auto-display
-                        data: {
-                            title: notification.title,
-                            body: notification.body,
-                            url: notification.link || '/',
-                            type: notification.type || 'info', // Pass type
-                            icon: 'https://educationfyp.vercel.app/report.png'
-                        },
-                        webpush: {
-                            fcm_options: {
-                                link: notification.link || '/'
-                            }
+            if (fcmToken) {
+                console.log(`User ${userId} token found in RTDB.`);
+                const message = {
+                    token: fcmToken,
+                    // notification: { ... }  <-- REMOVED to prevent auto-display
+                    data: {
+                        title: notification.title,
+                        body: notification.body,
+                        url: notification.link || '/',
+                        type: notification.type || 'info', // Pass type
+                        icon: 'https://educationfyp.vercel.app/report.png'
+                    },
+                    webpush: {
+                        fcm_options: {
+                            link: notification.link || '/'
                         }
-                    };
-
-                    try {
-                        console.log(`Sending FCM message to ${userId}...`);
-                        const response = await messaging.send(message);
-                        console.log('Successfully sent message:', response);
-
-                        // Mark as processed
-                        await userNotifRef.child(notifId).update({ processed: true });
-                        console.log(`Marked notification ${notifId} as processed.`);
-
-                    } catch (error) {
-                        console.error('Error sending FCM message:', error);
                     }
-                } else {
-                    console.log(`No FCM token for user ${userId}`);
+                };
+
+                try {
+                    console.log(`Sending FCM message to ${userId}...`);
+                    const response = await messaging.send(message);
+                    console.log('Successfully sent message:', response);
+
+                    // Mark as processed
+                    await userNotifRef.child(notifId).update({ processed: true });
+                    console.log(`Marked notification ${notifId} as processed.`);
+
+                } catch (error) {
+                    console.error('Error sending FCM message:', error);
                 }
             } else {
-                console.log(`User document ${userId} does not exist.`);
+                console.log(`No FCM token found in RTDB for user ${userId}`);
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
@@ -108,7 +103,7 @@ notificationsRef.on('child_added', (userSnapshot) => {
 // Create a simple HTTP server
 const port = process.env.PORT || 3000;
 
-const server = http.createServer(async(req, res) => {
+const server = http.createServer(async (req, res) => {
     // Enable CORS
     // Enable CORS for trusted domains only
     const allowedOrigins = [
@@ -132,7 +127,7 @@ const server = http.createServer(async(req, res) => {
     if (req.method === 'POST' && req.url === '/delete-user') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', async() => {
+        req.on('end', async () => {
             try {
                 const { email } = JSON.parse(body);
                 if (!email) throw new Error('Email is required');
