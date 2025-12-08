@@ -90,6 +90,14 @@ notificationsRef.on('child_added', (userSnapshot) => {
 
                 } catch (error) {
                     console.error('Error sending FCM message:', error);
+
+                    // Cleanup invalid tokens to prevent repeating errors
+                    if (error.code === 'messaging/registration-token-not-registered' ||
+                        error.code === 'messaging/invalid-registration-token') {
+                        console.log(`⚠️ Token for user ${userId} is invalid/expired. Removing from RTDB...`);
+                        await db.ref(`users/${userId}/fcmToken`).remove();
+                        console.log(`✅ Removed invalid token for ${userId}`);
+                    }
                 }
             } else {
                 console.log(`No FCM token found in RTDB for user ${userId}`);
